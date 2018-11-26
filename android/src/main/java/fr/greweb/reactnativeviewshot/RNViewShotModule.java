@@ -81,6 +81,7 @@ public class RNViewShotModule extends ReactContextBaseJavaModule {
                 : Formats.PNG;
 
         final double quality = options.getDouble("quality");
+        final double scale = options.getDouble("scale");
         final Integer scaleWidth = options.hasKey("width") ? (int) (dm.density * options.getDouble("width")) : null;
         final Integer scaleHeight = options.hasKey("height") ? (int) (dm.density * options.getDouble("height")) : null;
         final String resultStreamFormat = options.getString("result");
@@ -91,12 +92,16 @@ public class RNViewShotModule extends ReactContextBaseJavaModule {
             if (Results.TEMP_FILE.equals(resultStreamFormat)) {
                 outputFile = createTempFile(getReactApplicationContext(), extension);
             }
+            if(Results.USER_FILE.equals(resultStreamFormat)) {
+                String filename = options.getString("filename");
+                outputFile = new File(filename);
+            }
 
             final Activity activity = getCurrentActivity();
             final UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
 
             uiManager.addUIBlock(new ViewShot(
-                    tag, extension, imageFormat, quality,
+                    tag, extension, imageFormat, quality, scale,
                     scaleWidth, scaleHeight, outputFile, resultStreamFormat,
                     snapshotContentContainer, reactContext, activity, promise)
             );

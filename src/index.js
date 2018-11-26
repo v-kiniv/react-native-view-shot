@@ -10,7 +10,8 @@ type Options = {
   height?: number,
   format: "png" | "jpg" | "webm" | "raw",
   quality: number,
-  result: "tmpfile" | "base64" | "data-uri" | "zip-base64",
+  scale: number,
+  result: "tmpfile" | "userfile" | "base64" | "data-uri" | "zip-base64",
   snapshotContentContainer: boolean
 };
 
@@ -24,13 +25,14 @@ const acceptedFormats = ["png", "jpg"].concat(
   Platform.OS === "android" ? ["webm", "raw"] : []
 );
 
-const acceptedResults = ["tmpfile", "base64", "data-uri"].concat(
+const acceptedResults = ["tmpfile", "userfile", "base64", "data-uri"].concat(
   Platform.OS === "android" ? ["zip-base64"] : []
 );
 
 const defaultOptions = {
   format: "png",
   quality: 1,
+  scale: 1,
   result: "tmpfile",
   snapshotContentContainer: false
 };
@@ -65,6 +67,18 @@ function validateOptions(
   ) {
     errors.push("option quality should be a number between 0.0 and 1.0");
     options.quality = defaultOptions.quality;
+  }
+  if (
+    typeof options.scale !== "number" ||
+    options.scale < 0 ||
+    options.scale > 1
+  ) {
+    errors.push("option scale should be a number between 0.0 and 1.0");
+    options.scale = defaultOptions.scale;
+  }
+  if (options.result === 'userfile' && !options.filename) {
+    errors.push("option result has value userfile but no filename provided");
+    delete options.result;
   }
   if (typeof options.snapshotContentContainer !== "boolean") {
     errors.push("option snapshotContentContainer should be a boolean");

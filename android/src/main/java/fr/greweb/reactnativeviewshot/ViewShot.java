@@ -91,6 +91,10 @@ public class ViewShot implements UIBlock {
          */
         String TEMP_FILE = "tmpfile";
         /**
+         * Save screenshot at location provided by user.
+         */
+        String USER_FILE = "userfile";
+        /**
          * Base 64 encoded image.
          */
         String BASE_64 = "base64";
@@ -118,8 +122,9 @@ public class ViewShot implements UIBlock {
     @Formats
     private final int format;
     private final double quality;
-    private final Integer width;
-    private final Integer height;
+    private final double scale;
+    private Integer width;
+    private Integer height;
     private final File output;
     @Results
     private final String result;
@@ -137,6 +142,7 @@ public class ViewShot implements UIBlock {
             final String extension,
             @Formats final int format,
             final double quality,
+            final double scale,
             @Nullable Integer width,
             @Nullable Integer height,
             final File output,
@@ -149,6 +155,7 @@ public class ViewShot implements UIBlock {
         this.extension = extension;
         this.format = format;
         this.quality = quality;
+        this.scale = scale;
         this.width = width;
         this.height = height;
         this.output = output;
@@ -182,9 +189,11 @@ public class ViewShot implements UIBlock {
             stream.setSize(proposeSize(view));
             outputBuffer = stream.innerBuffer();
 
-            if (Results.TEMP_FILE.equals(result) && Formats.RAW == this.format) {
+            final boolean isFile = Results.TEMP_FILE.equals(result) || Results.USER_FILE.equals(result);
+
+            if (isFile && Formats.RAW == this.format) {
                 saveToRawFileOnDevice(view);
-            } else if (Results.TEMP_FILE.equals(result) && Formats.RAW != this.format) {
+            } else if (isFile && Formats.RAW != this.format) {
                 saveToTempFileOnDevice(view);
             } else if (Results.BASE_64.equals(result) || Results.ZIP_BASE_64.equals(result)) {
                 saveToBase64String(view);
@@ -321,6 +330,11 @@ public class ViewShot implements UIBlock {
 
         if (w <= 0 || h <= 0) {
             throw new RuntimeException("Impossible to snapshot the view: view is invalid");
+        }
+
+        if(scale != 1) {
+            width = (int)(w * scale);
+            height =  (int)(h * scale);
         }
 
         // evaluate real height

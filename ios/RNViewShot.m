@@ -29,7 +29,7 @@ RCT_EXPORT_METHOD(captureScreen: (NSDictionary *)options
   [self captureRef: [NSNumber numberWithInt:-1] withOptions:options resolve:resolve reject:reject];
 }
 
-RCT_EXPORT_METHOD(releaseCapture:(nonnull NSString *)uri)
+RCT_EXPORT_METHOD(releaseCapture:(nonnull NSString *)uri) 
 {
   NSString *directory = [NSTemporaryDirectory() stringByAppendingPathComponent:@"ReactNative"];
   // Ensure it's a valid file in the tmp directory
@@ -65,12 +65,10 @@ RCT_EXPORT_METHOD(captureRef:(nonnull NSNumber *)target
 
     // Get options
     CGSize size = [RCTConvert CGSize:options];
+    CGFloat scale = [RCTConvert CGFloat:options[@"scale"]];
     NSString *format = [RCTConvert NSString:options[@"format"]];
     NSString *result = [RCTConvert NSString:options[@"result"]];
     BOOL snapshotContentContainer = [RCTConvert BOOL:options[@"snapshotContentContainer"]];
-
-    // Capture image
-    BOOL success;
 
     UIView* rendered;
     UIScrollView* scrollView;
@@ -104,10 +102,11 @@ RCT_EXPORT_METHOD(captureRef:(nonnull NSNumber *)target
       scrollView.contentOffset = CGPointZero;
       scrollView.frame = CGRectMake(0, 0, scrollView.contentSize.width, scrollView.contentSize.height);
     }
-
-    UIGraphicsBeginImageContextWithOptions(size, NO, 0);
     
-    success = [rendered drawViewHierarchyInRect:(CGRect){CGPointZero, size} afterScreenUpdates:YES];
+    CGFloat deviceScale = [UIScreen mainScreen].nativeScale;
+    UIGraphicsBeginImageContextWithOptions(size, YES, deviceScale * scale);
+    
+    [rendered.layer renderInContext:UIGraphicsGetCurrentContext()];
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
 
@@ -115,11 +114,6 @@ RCT_EXPORT_METHOD(captureRef:(nonnull NSNumber *)target
       // Restore scroll & frame
       scrollView.contentOffset = savedContentOffset;
       scrollView.frame = savedFrame;
-    }
-
-    if (!success) {
-      reject(RCTErrorUnspecified, @"The view cannot be captured. drawViewHierarchyInRect was not successful. This is a potential technical or security limitation.", nil);
-      return;
     }
 
     if (!image) {
@@ -148,12 +142,11 @@ RCT_EXPORT_METHOD(captureRef:(nonnull NSNumber *)target
       else if ([result isEqualToString:@"data-uri"]) {
         // Return as a base64 data uri string
         NSString *base64 = [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
-        NSString *imageFormat = ([format isEqualToString:@"jpg"]) ? @"jpeg" : format;
-        res = [NSString stringWithFormat:@"data:image/%@;base64,%@", imageFormat, base64];
+        res = [NSString stringWithFormat:@"data:image/%@;base64,%@", format, base64];
       }
       else {
-        // Save to a temp file
-        NSString *path = RCTTempFilePath(format, &error);
+        // Save to a temp or user file file
+        NSString *path = [result isEqualToString:@"userfile"] ? [RCTConvert NSString:options[@"filename"]] : RCTTempFilePath(format, &error);
         if (path && !error) {
           if ([data writeToFile:path options:(NSDataWritingOptions)0 error:&error]) {
             res = path;
